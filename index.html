@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Day 1 — Java Ecosystem & Memory Model | Shreyas Gangadhar</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0d0f14;
+  --bg2:      #13161e;
+  --bg3:      #1a1d28;
+  --surface:  #1e2230;
+  --border:   #2a2f42;
+  --accent:   #7c6af5;
+  --accent2:  #f5a623;
+  --green:    #3dd68c;
+  --red:      #f25f5c;
+  --teal:     #38bdf8;
+  --pink:     #f472b6;
+  --text:     #e8eaf0;
+  --muted:    #8892a4;
+  --code-bg:  #161922;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Sora', sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── LAYOUT ── */
+.wrapper { max-width: 900px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 60px 0 40px;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -60px; left: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(124,106,245,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(124,106,245,0.12);
+  border: 1px solid rgba(124,106,245,0.3);
+  border-radius: 100px;
+  padding: 4px 14px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+.hero h1 {
+  font-size: clamp(28px, 5vw, 46px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #e8eaf0 30%, #7c6af5 80%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  color: var(--muted); font-size: 15px; max-width: 600px; line-height: 1.7;
+}
+.hero-meta {
+  display: flex; gap: 20px; flex-wrap: wrap; margin-top: 24px;
+}
+.meta-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 14px;
+  font-size: 12px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
+}
+.meta-pill span { color: var(--accent2); font-weight: 600; }
+
+/* ── TOC ── */
+.toc {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin: 32px 0;
+}
+.toc-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+.toc ol { padding-left: 18px; }
+.toc li { margin: 5px 0; }
+.toc a { color: var(--muted); text-decoration: none; font-size: 13.5px; transition: color 0.2s; }
+.toc a:hover { color: var(--text); }
+.toc a::before { content: '→ '; color: var(--accent); font-size: 11px; }
+
+/* ── SECTIONS ── */
+.section { margin: 48px 0; }
+.section-label {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent2);
+  margin-bottom: 10px;
+}
+.section-label::before { content: ''; display: block; width: 20px; height: 2px; background: var(--accent2); border-radius: 2px; }
+h2 {
+  font-size: 22px; font-weight: 700; color: var(--text);
+  margin-bottom: 6px; line-height: 1.3;
+}
+h3 {
+  font-size: 16px; font-weight: 600; color: var(--teal);
+  margin: 28px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+h3::before { content: '//'; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+p { color: #c4c9d8; margin-bottom: 14px; }
+
+/* ── CALLOUT BOXES ── */
+.callout {
+  border-radius: 12px; padding: 18px 22px; margin: 20px 0;
+  border-left: 3px solid;
+  position: relative; overflow: hidden;
+}
+.callout::after {
+  content: '';
+  position: absolute; top: 0; right: 0;
+  width: 80px; height: 100%;
+  background: linear-gradient(to left, rgba(255,255,255,0.02), transparent);
+  pointer-events: none;
+}
+.callout.info { background: rgba(56,189,248,0.07); border-color: var(--teal); }
+.callout.tip  { background: rgba(61,214,140,0.07); border-color: var(--green); }
+.callout.warn { background: rgba(245,166,35,0.08); border-color: var(--accent2); }
+.callout.def  { background: rgba(124,106,245,0.08); border-color: var(--accent); }
+.callout.layman { background: rgba(244,114,182,0.07); border-color: var(--pink); }
+.callout-icon { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 6px; }
+.callout.info .callout-icon { color: var(--teal); }
+.callout.tip  .callout-icon { color: var(--green); }
+.callout.warn .callout-icon { color: var(--accent2); }
+.callout.def  .callout-icon { color: var(--accent); }
+.callout.layman .callout-icon { color: var(--pink); }
+.callout p { margin: 0; font-size: 14px; color: #c4c9d8; }
+.callout strong { color: var(--text); }
+
+/* ── CODE BLOCKS ── */
+.code-block {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
+}
+.code-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px;
+}
+.code-dots { display: flex; gap: 6px; }
+.code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+.code-dots .r { background: #ff5f57; }
+.code-dots .y { background: #febc2e; }
+.code-dots .g { background: #28c840; }
+.code-lang { color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; }
+.code-body { padding: 18px 20px; font-size: 13px; line-height: 1.7; overflow-x: auto; white-space: pre; }
+/* Syntax */
+.kw  { color: #c792ea; }
+.typ { color: #82aaff; }
+.str { color: #c3e88d; }
+.cmt { color: #546e7a; font-style: italic; }
+.num { color: #f78c6c; }
+.fn  { color: #82aaff; }
+.op  { color: #89ddff; }
+.cls { color: #ffcb6b; }
+.ann { color: var(--accent2); }
+
+/* ── OUTPUT BOX ── */
+.output {
+  background: rgba(61,214,140,0.05);
+  border: 1px solid rgba(61,214,140,0.2);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-top: -8px; margin-bottom: 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px; color: var(--green);
+}
+.output::before { content: '▶  Output:  '; color: var(--muted); }
+
+/* ── DIAGRAMS (SVG) ── */
+.diagram-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin: 24px 0;
+  overflow-x: auto;
+}
+.diagram-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+.diagram-caption {
+  text-align: center; font-size: 12px; color: var(--muted);
+  margin-top: 12px; font-style: italic;
+}
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th {
+  background: var(--surface); color: var(--accent);
+  font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+  padding: 10px 16px; text-align: left;
+  border-bottom: 2px solid var(--accent);
+}
+td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: #c4c9d8; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+td:first-child { font-family: 'JetBrains Mono', monospace; color: var(--accent2); font-size: 12.5px; }
+
+/* ── COMPARISON CARDS ── */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+@media (max-width:600px) { .compare-grid { grid-template-columns: 1fr; } }
+.compare-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.compare-card.left { border-top: 3px solid var(--teal); }
+.compare-card.right { border-top: 3px solid var(--pink); }
+.compare-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.compare-card.left h4 { color: var(--teal); }
+.compare-card.right h4 { color: var(--pink); }
+.compare-card ul { list-style: none; padding: 0; }
+.compare-card ul li {
+  font-size: 13px; color: #c4c9d8; padding: 5px 0;
+  border-bottom: 1px solid var(--border); line-height: 1.5;
+}
+.compare-card ul li:last-child { border: none; }
+.compare-card ul li::before { content: '→ '; color: var(--muted); font-size: 11px; }
+
+/* ── INTERVIEW BOX ── */
+.interview-box {
+  background: linear-gradient(135deg, rgba(124,106,245,0.1), rgba(245,166,35,0.06));
+  border: 1px solid rgba(124,106,245,0.25);
+  border-radius: 14px;
+  padding: 22px 26px;
+  margin: 28px 0;
+}
+.interview-box h4 {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--accent); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.interview-box h4::before { content: '🎯'; font-size: 14px; }
+.interview-q {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  margin: 10px 0 5px; padding-left: 12px;
+  border-left: 2px solid var(--accent2);
+}
+.interview-a {
+  font-size: 13px; color: var(--muted); padding-left: 12px; margin-bottom: 12px; line-height: 1.65;
+}
+.interview-a strong { color: var(--text); }
+
+/* ── STEP LIST ── */
+.steps { margin: 16px 0; }
+.step {
+  display: flex; gap: 14px; margin-bottom: 14px;
+  align-items: flex-start;
+}
+.step-num {
+  min-width: 28px; height: 28px;
+  background: var(--accent); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+  flex-shrink: 0; margin-top: 2px;
+}
+.step-content { font-size: 14px; color: #c4c9d8; }
+.step-content strong { color: var(--text); }
+
+/* ── KEY TERMS ── */
+.key-term {
+  display: inline-block;
+  background: rgba(124,106,245,0.15);
+  border: 1px solid rgba(124,106,245,0.3);
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px; color: #c792ea;
+}
+.highlight { color: var(--accent2); font-weight: 600; }
+.green-hl { color: var(--green); font-weight: 600; }
+.teal-hl { color: var(--teal); font-weight: 600; }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  margin: 40px 0;
+}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px 22px; margin-top: 60px;
+}
+.nav-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.nav-link { color: var(--accent); font-weight: 600; font-size: 14px; text-decoration: none; }
+.nav-link:hover { color: var(--text); }
+
+/* ── MEMORY CARD ── */
+.memory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 12px; margin: 20px 0; }
+.memory-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+}
+.memory-card .mc-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; margin-bottom: 5px; }
+.memory-card .mc-val { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4; }
+.memory-card .mc-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+/* ── INLINE CODE ── */
+code { background: rgba(124,106,245,0.15); border-radius: 4px; padding: 1px 6px; font-family: 'JetBrains Mono',monospace; font-size: 12.5px; color: #c792ea; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<!-- ─── HERO ─────────────────────────────────────────────────── -->
+<div class="hero">
+  <div class="hero-badge"><span class="dot"></span>Day 1 of 35</div>
+  <h1>Java Ecosystem<br/>& Memory Model</h1>
+  <p class="hero-sub">Everything that happens <em>before</em> your code runs — and where your objects live when it does. The foundation every interviewer expects you to know cold.</p>
+  <div class="hero-meta">
+    <div class="meta-pill">📘 Phase <span>1</span> — Fundamentals</div>
+    <div class="meta-pill">🎯 Topic <span>1 / 35</span></div>
+    <div class="meta-pill">⏱ Read time <span>~25 min</span></div>
+    <div class="meta-pill">👤 <span>Shreyas Gangadhar</span></div>
+  </div>
+</div>
+
+<!-- ─── TOC ──────────────────────────────────────────────────── -->
+<div class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#sec1">The Big Picture — How Java Works</a></li>
+    <li><a href="#sec2">JDK, JRE, JVM — The Layered Architecture</a></li>
+    <li><a href="#sec3">How Your Code Executes — Step by Step</a></li>
+    <li><a href="#sec4">Heap vs Stack Memory</a></li>
+    <li><a href="#sec5">Garbage Collection — The Janitor</a></li>
+    <li><a href="#sec6">Object Creation Lifecycle</a></li>
+    <li><a href="#sec7">Code Examples — All Scenarios</a></li>
+    <li><a href="#sec8">Interview Questions & Model Answers</a></li>
+    <li><a href="#sec9">Quick Recap — Memory Anchors</a></li>
+  </ol>
+</div>
+
+<!-- ─── SECTION 1 ─────────────────────────────────────────────── -->
+<div class="section" id="sec1">
+  <div class="section-label">Section 01</div>
+  <h2>The Big Picture — How Java Works</h2>
+
+  <div class="callout layman">
+    <div class="callout-icon">☕ Layman's Take</div>
+    <p>Imagine you write a recipe in English. A translator converts it into a universal cooking language that any kitchen in the world can follow — regardless of whether the kitchen is in India, the US, or Japan. Java does exactly this. You write once, and it runs <strong>anywhere</strong>. That's Java's superpower: <strong>Write Once, Run Anywhere (WORA)</strong>.</p>
+  </div>
+
+  <p>Every programming language needs to turn your human-readable code into instructions a computer can execute. Java does this in a <strong>two-step process</strong> that makes it uniquely portable:</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content"><strong>Compilation:</strong> Your <code>.java</code> source file is compiled into <code>.class</code> bytecode — a <em>platform-neutral</em> intermediate format. Not binary for Windows, not binary for Mac. Just bytecode.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content"><strong>Execution:</strong> The JVM (Java Virtual Machine) reads that bytecode and translates it into native machine code <em>specific to the host OS</em>. The JVM is the bridge.</div>
+    </div>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 820 160" width="820" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#7c6af5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <!-- Step 1 -->
+      <rect x="10" y="30" width="160" height="70" rx="10" fill="#1e2230" stroke="#7c6af5" stroke-width="1.5"/>
+      <text x="90" y="60" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" fill="#c792ea" font-weight="700">HelloWorld.java</text>
+      <text x="90" y="80" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#8892a4">Your source code</text>
+      <text x="90" y="115" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">Human-readable</text>
+
+      <!-- Arrow 1 -->
+      <line x1="170" y1="65" x2="230" y2="65" stroke="#7c6af5" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="200" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#7c6af5" font-weight="600">javac</text>
+      <text x="200" y="84" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">compiler</text>
+
+      <!-- Step 2 -->
+      <rect x="230" y="30" width="160" height="70" rx="10" fill="#1e2230" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="310" y="60" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" fill="#38bdf8" font-weight="700">HelloWorld.class</text>
+      <text x="310" y="80" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#8892a4">Bytecode</text>
+      <text x="310" y="115" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">Platform-neutral</text>
+
+      <!-- Arrow 2 -->
+      <line x1="390" y1="65" x2="450" y2="65" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr)" stroke-dasharray="5 4"/>
+      <text x="420" y="55" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#38bdf8" font-weight="600">JVM</text>
+      <text x="420" y="84" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">interprets</text>
+
+      <!-- Step 3 boxes (3 OSes) -->
+      <rect x="450" y="10" width="120" height="46" rx="8" fill="#1a2a1a" stroke="#3dd68c" stroke-width="1.2"/>
+      <text x="510" y="32" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3dd68c" font-weight="600">Windows</text>
+      <text x="510" y="48" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">native binary</text>
+
+      <rect x="450" y="62" width="120" height="46" rx="8" fill="#1a1a2a" stroke="#7c6af5" stroke-width="1.2"/>
+      <text x="510" y="84" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#7c6af5" font-weight="600">Linux</text>
+      <text x="510" y="100" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">native binary</text>
+
+      <rect x="450" y="114" width="120" height="46" rx="8" fill="#2a1a1a" stroke="#f25f5c" stroke-width="1.2"/>
+      <text x="510" y="136" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#f25f5c" font-weight="600">macOS</text>
+      <text x="510" y="152" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">native binary</text>
+
+      <!-- side-label WORA -->
+      <rect x="600" y="50" width="200" height="60" rx="10" fill="rgba(124,106,245,0.1)" stroke="rgba(124,106,245,0.3)" stroke-width="1"/>
+      <text x="700" y="75" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" fill="#7c6af5" font-weight="700">Write Once,</text>
+      <text x="700" y="95" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" fill="#7c6af5" font-weight="700">Run Anywhere ✦</text>
+    </svg>
+    <div class="diagram-caption">Fig 1.1 — Java's two-step compilation model enabling platform independence</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 2 ─────────────────────────────────────────────── -->
+<div class="section" id="sec2">
+  <div class="section-label">Section 02</div>
+  <h2>JDK, JRE, JVM — The Layered Architecture</h2>
+
+  <div class="callout layman">
+    <div class="callout-icon">🎂 Layman's Take</div>
+    <p>Think of it as a <strong>Russian nesting doll</strong>. The smallest doll is the JVM. It sits inside the JRE (the middle doll). The JRE sits inside the JDK (the outermost doll). Each layer adds more capability on top of the one inside it.</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 520 320" width="520" xmlns="http://www.w3.org/2000/svg">
+      <!-- JDK outer -->
+      <rect x="10" y="10" width="500" height="300" rx="20" fill="rgba(245,166,35,0.07)" stroke="#f5a623" stroke-width="1.8"/>
+      <text x="30" y="36" font-family="Sora,sans-serif" font-size="13" fill="#f5a623" font-weight="700">JDK  —  Java Development Kit</text>
+      <text x="30" y="54" font-family="Sora,sans-serif" font-size="11" fill="#8892a4">javac · javadoc · jar · debugger · profiler · all dev tools</text>
+
+      <!-- JRE middle -->
+      <rect x="30" y="68" width="460" height="220" rx="16" fill="rgba(56,189,248,0.07)" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="50" y="92" font-family="Sora,sans-serif" font-size="13" fill="#38bdf8" font-weight="700">JRE  —  Java Runtime Environment</text>
+      <text x="50" y="110" font-family="Sora,sans-serif" font-size="11" fill="#8892a4">Standard class libraries (java.lang, java.util, java.io …)</text>
+
+      <!-- JVM inner -->
+      <rect x="50" y="122" width="420" height="146" rx="12" fill="rgba(124,106,245,0.1)" stroke="#7c6af5" stroke-width="1.5"/>
+      <text x="70" y="146" font-family="Sora,sans-serif" font-size="13" fill="#7c6af5" font-weight="700">JVM  —  Java Virtual Machine</text>
+      <text x="70" y="163" font-family="Sora,sans-serif" font-size="11" fill="#8892a4">Runs bytecode · manages memory · provides JIT</text>
+
+      <!-- JVM internals row -->
+      <rect x="68" y="174" width="108" height="78" rx="8" fill="rgba(61,214,140,0.1)" stroke="#3dd68c" stroke-width="1"/>
+      <text x="122" y="194" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3dd68c" font-weight="600">Class Loader</text>
+      <text x="122" y="210" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Bootstrap</text>
+      <text x="122" y="224" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Extension</text>
+      <text x="122" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Application</text>
+
+      <rect x="186" y="174" width="108" height="78" rx="8" fill="rgba(124,106,245,0.1)" stroke="#7c6af5" stroke-width="1"/>
+      <text x="240" y="194" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7c6af5" font-weight="600">Memory</text>
+      <text x="240" y="210" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Heap</text>
+      <text x="240" y="224" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Stack</text>
+      <text x="240" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Method Area</text>
+
+      <rect x="304" y="174" width="108" height="78" rx="8" fill="rgba(245,166,35,0.1)" stroke="#f5a623" stroke-width="1"/>
+      <text x="358" y="194" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#f5a623" font-weight="600">Exec Engine</text>
+      <text x="358" y="210" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Interpreter</text>
+      <text x="358" y="224" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">JIT Compiler</text>
+      <text x="358" y="238" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">GC</text>
+    </svg>
+    <div class="diagram-caption">Fig 2.1 — JDK ⊇ JRE ⊇ JVM — nested architecture (the "Russian doll")</div>
+  </div>
+
+  <h3>JVM — The Heart</h3>
+  <p>The JVM is a <strong>virtual machine</strong> — it simulates a real computer in software. Its job is to take platform-neutral bytecode and execute it on whatever OS it's running on. It also owns <strong>memory management</strong> completely — you never manually allocate or free memory in Java.</p>
+
+  <div class="callout def">
+    <div class="callout-icon">📖 Definition</div>
+    <p>The <strong>JVM (Java Virtual Machine)</strong> is a specification for a software-based computing machine that executes Java bytecode. It provides the runtime environment in which Java programs execute. Each OS has its own JVM implementation (HotSpot is Oracle's most popular one).</p>
+  </div>
+
+  <h3>JRE — The Runtime</h3>
+  <p>The JRE is what you install on a <em>server</em> or <em>end-user machine</em> just to <strong>run</strong> Java programs. It includes the JVM + all the standard library classes (<code>java.lang</code>, <code>java.util</code>, etc.). It does <strong>not</strong> include the compiler (<code>javac</code>).</p>
+
+  <h3>JDK — The Developer's Toolkit</h3>
+  <p>The JDK is what <em>you</em> install as a developer. It includes everything in the JRE, plus:</p>
+  <ul style="list-style:none;padding-left:16px;">
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>javac</code> — the compiler</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>javadoc</code> — documentation generator</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>jar</code> — packaging tool</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>jdb</code> — debugger</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>jvisualvm</code> — profiler</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡 Interview Tip</div>
+    <p>The most common interview trick: <em>"I just need to run a Java program on a production server — do I install JDK or JRE?"</em> Answer: <strong>JRE is enough</strong> (it has the JVM and runtime libs). JDK is only needed to <em>develop/compile</em>. In practice, Java 11+ ships JDK and JRE merged — but the conceptual distinction is still asked.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Full Form</th><th>Contains</th><th>Used By</th><th>Has Compiler?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>JVM</td><td>Java Virtual Machine</td><td>Execution engine, memory manager</td><td>Runtime engine</td><td>No</td></tr>
+        <tr><td>JRE</td><td>Java Runtime Environment</td><td>JVM + standard libraries</td><td>End users, servers</td><td>No</td></tr>
+        <tr><td>JDK</td><td>Java Development Kit</td><td>JRE + dev tools + compiler</td><td>Developers</td><td>Yes (javac)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 3 ─────────────────────────────────────────────── -->
+<div class="section" id="sec3">
+  <div class="section-label">Section 03</div>
+  <h2>How Your Code Executes — Step by Step</h2>
+
+  <div class="callout layman">
+    <div class="callout-icon">🎬 Layman's Take</div>
+    <p>Imagine producing a movie. You write a script (<code>.java</code>), a translator converts it into a storyboard (<code>.class</code> bytecode), and then the director (JVM) decides exactly how each scene will be filmed — adapting it to the city (OS) where filming is happening.</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 800 240" width="800" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#7c6af5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Stage 1 -->
+      <rect x="10" y="60" width="130" height="100" rx="10" fill="#1e2230" stroke="#c792ea" stroke-width="1.5"/>
+      <text x="75" y="95" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#c792ea" font-weight="700">Source Code</text>
+      <text x="75" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#8892a4">.java</text>
+      <text x="75" y="148" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#546e7a">You write this</text>
+
+      <!-- Arrow + label -->
+      <line x1="140" y1="110" x2="188" y2="110" stroke="#7c6af5" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <text x="164" y="100" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#7c6af5" font-weight="600">javac</text>
+
+      <!-- Stage 2 -->
+      <rect x="190" y="60" width="130" height="100" rx="10" fill="#1e2230" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="255" y="95" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#38bdf8" font-weight="700">Bytecode</text>
+      <text x="255" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#8892a4">.class</text>
+      <text x="255" y="148" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#546e7a">Platform-neutral</text>
+
+      <!-- Arrow + label -->
+      <line x1="320" y1="110" x2="368" y2="110" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <text x="344" y="100" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#38bdf8" font-weight="600">ClassLoader</text>
+
+      <!-- Stage 3 -->
+      <rect x="370" y="60" width="130" height="100" rx="10" fill="#1e2230" stroke="#3dd68c" stroke-width="1.5"/>
+      <text x="435" y="95" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3dd68c" font-weight="700">Loaded into</text>
+      <text x="435" y="115" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3dd68c">JVM Memory</text>
+      <text x="435" y="148" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#546e7a">Method Area</text>
+
+      <!-- Arrow + label -->
+      <line x1="500" y1="110" x2="548" y2="110" stroke="#3dd68c" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <text x="524" y="100" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#3dd68c" font-weight="600">Bytecode</text>
+      <text x="524" y="120" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#3dd68c">verifier</text>
+
+      <!-- Stage 4 -->
+      <rect x="550" y="60" width="130" height="100" rx="10" fill="#1e2230" stroke="#f5a623" stroke-width="1.5"/>
+      <text x="615" y="90" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#f5a623" font-weight="700">Execution</text>
+      <text x="615" y="108" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">Interpreter (slow start)</text>
+      <text x="615" y="124" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">JIT (hot code → fast)</text>
+      <text x="615" y="148" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#546e7a">Output on screen</text>
+
+      <!-- Step labels below -->
+      <text x="75"  y="200" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">① Write</text>
+      <text x="255" y="200" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">② Compile</text>
+      <text x="435" y="200" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">③ Load</text>
+      <text x="615" y="200" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#546e7a">④ Execute</text>
+    </svg>
+    <div class="diagram-caption">Fig 3.1 — Full Java execution pipeline from source to output</div>
+  </div>
+
+  <h3>The JIT Compiler — Java's Secret Speed Weapon</h3>
+  <p>The JVM starts by <strong>interpreting</strong> bytecode line by line (slower). As it runs, it identifies <em>hot code</em> — methods called frequently. The <span class="highlight">JIT (Just-In-Time) Compiler</span> compiles those hot methods directly into native machine code. After the first few runs, those methods execute at near-native speed. This is why Java programs <em>get faster</em> the longer they run.</p>
+
+  <div class="callout info">
+    <div class="callout-icon">ℹ️ Fun Fact</div>
+    <p>Modern JVMs (like HotSpot) can be <em>faster than C++</em> for long-running server processes because the JIT can make <strong>runtime optimizations</strong> (inline hot methods, eliminate dead branches) that a static compiler can't — it uses real runtime data to optimize.</p>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 4 ─────────────────────────────────────────────── -->
+<div class="section" id="sec4">
+  <div class="section-label">Section 04</div>
+  <h2>Heap vs Stack Memory — The Core of Every Java Interview</h2>
+
+  <div class="callout layman">
+    <div class="callout-icon">🏠 Layman's Take</div>
+    <p>Think of a restaurant. The <strong>Stack</strong> is the waiter's notepad — small, fast, used to remember <em>the current order</em>. When the order is done, the note is torn off and thrown away. The <strong>Heap</strong> is the kitchen storage — large, shared among all waiters, where the actual <em>food (objects)</em> are stored. The notepad only holds the <em>locker number</em> (reference) that points to where the food is in storage.</p>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 780 360" width="780" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ref-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- STACK box -->
+      <rect x="30" y="20" width="260" height="310" rx="14" fill="rgba(56,189,248,0.05)" stroke="#38bdf8" stroke-width="1.5"/>
+      <text x="160" y="50" text-anchor="middle" font-family="Sora,sans-serif" font-size="14" fill="#38bdf8" font-weight="700">STACK</text>
+      <text x="160" y="68" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#8892a4">per thread · LIFO · auto-managed</text>
+
+      <!-- Stack frames (LIFO) - newest on top -->
+      <rect x="50" y="82" width="220" height="50" rx="7" fill="#1a2030" stroke="#38bdf8" stroke-width="1"/>
+      <text x="160" y="103" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#38bdf8" font-weight="600">greet() frame</text>
+      <text x="160" y="120" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">String name = "ref→0xA1"</text>
+
+      <rect x="50" y="138" width="220" height="50" rx="7" fill="#1a2030" stroke="#38bdf8" stroke-width="1" opacity="0.8"/>
+      <text x="160" y="159" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#38bdf8" font-weight="600">main() frame</text>
+      <text x="160" y="176" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">Dog d = ref→0xB4</text>
+
+      <rect x="50" y="194" width="220" height="50" rx="7" fill="#1a2030" stroke="#38bdf8" stroke-width="1" opacity="0.5"/>
+      <text x="160" y="215" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#546e7a" font-weight="600">[older frames]</text>
+      <text x="160" y="232" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#3a4050">popped as methods return</text>
+
+      <!-- Stack labels -->
+      <text x="160" y="285" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#546e7a">Stores: local vars, refs, params</text>
+      <text x="160" y="305" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#546e7a">Popped automatically on return</text>
+      <text x="160" y="325" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#38bdf8">Fast · Small · Thread-private</text>
+
+      <!-- HEAP box -->
+      <rect x="390" y="20" width="370" height="310" rx="14" fill="rgba(124,106,245,0.05)" stroke="#7c6af5" stroke-width="1.5"/>
+      <text x="575" y="50" text-anchor="middle" font-family="Sora,sans-serif" font-size="14" fill="#7c6af5" font-weight="700">HEAP</text>
+      <text x="575" y="68" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#8892a4">all threads share · GC managed · large</text>
+
+      <!-- Heap objects -->
+      <rect x="415" y="82" width="155" height="70" rx="8" fill="#1e1a30" stroke="#7c6af5" stroke-width="1"/>
+      <text x="492" y="104" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#7c6af5" font-weight="600">Dog object 0xB4</text>
+      <text x="492" y="121" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">name: "Bruno"</text>
+      <text x="492" y="138" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">age: 3</text>
+
+      <rect x="585" y="82" width="155" height="70" rx="8" fill="#1e2a1a" stroke="#3dd68c" stroke-width="1"/>
+      <text x="662" y="104" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#3dd68c" font-weight="600">String 0xA1</text>
+      <text x="662" y="121" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">value: "Hello"</text>
+      <text x="662" y="138" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">[String Pool]</text>
+
+      <rect x="415" y="168" width="155" height="58" rx="8" fill="#2a1a1a" stroke="#f25f5c" stroke-width="1" opacity="0.7"/>
+      <text x="492" y="189" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="9.5" fill="#f25f5c" font-weight="600">orphan object</text>
+      <text x="492" y="207" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#8892a4">no references</text>
+      <text x="492" y="221" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#f25f5c">→ GC eligible</text>
+
+      <text x="575" y="285" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#546e7a">Stores: all objects &amp; class instances</text>
+      <text x="575" y="305" text-anchor="middle" font-family="Sora,sans-serif" font-size="11" fill="#546e7a">GC cleans up unreferenced objects</text>
+      <text x="575" y="325" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#7c6af5">Slower · Large · Thread-shared</text>
+
+      <!-- Reference arrows -->
+      <line x1="270" y1="175" x2="385" y2="115" stroke="#f5a623" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ref-arr)"/>
+      <line x1="270" y1="163" x2="385" y2="108" stroke="#3dd68c" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#ref-arr)"/>
+      <text x="315" y="128" font-family="Sora,sans-serif" font-size="9.5" fill="#f5a623" font-weight="600">reference</text>
+    </svg>
+    <div class="diagram-caption">Fig 4.1 — Heap and Stack memory layout during program execution</div>
+  </div>
+
+  <div class="compare-grid">
+    <div class="compare-card left">
+      <h4>Stack Memory</h4>
+      <ul>
+        <li>Stores method frames, local variables, and <em>references</em> to objects</li>
+        <li>LIFO — last in, first out. Frames are pushed/popped automatically</li>
+        <li>Each thread gets its own stack (thread-private)</li>
+        <li>Fixed size. <code>StackOverflowError</code> if it overflows (infinite recursion)</li>
+        <li>Very fast — just a pointer increment/decrement</li>
+        <li>Memory freed automatically when method returns</li>
+      </ul>
+    </div>
+    <div class="compare-card right">
+      <h4>Heap Memory</h4>
+      <ul>
+        <li>Stores all <em>objects</em> created with <code>new</code></li>
+        <li>Shared by all threads — requires synchronization for shared objects</li>
+        <li>Managed by Garbage Collector (GC)</li>
+        <li>Can grow/shrink dynamically. <code>OutOfMemoryError</code> if full</li>
+        <li>Slower than Stack — requires GC overhead</li>
+        <li>Objects live until GC decides to collect them</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>What Goes Where? — The Complete Rules</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>What</th><th>Where Stored</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Primitive local variable</td><td>Stack</td><td><code>int x = 5;</code> → value 5 is on Stack</td></tr>
+        <tr><td>Object reference (variable)</td><td>Stack</td><td><code>Dog d</code> → the variable d is on Stack</td></tr>
+        <tr><td>Object itself</td><td>Heap</td><td><code>new Dog()</code> → the Dog object is on Heap</td></tr>
+        <tr><td>Instance variables</td><td>Heap</td><td><code>dog.name</code> lives inside the object on Heap</td></tr>
+        <tr><td>Static variables</td><td>Method Area</td><td><code>static int count</code> → shared class-level storage</td></tr>
+        <tr><td>String literals</td><td>Heap (String Pool)</td><td><code>"Hello"</code> → String Pool (a section of Heap)</td></tr>
+        <tr><td>Method bytecode / class info</td><td>Method Area</td><td>class metadata, static fields, constants</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️ Common Confusion</div>
+    <p>When you write <code>Dog d = new Dog();</code>, three things happen: (1) The variable <code>d</code> is created on the <strong>Stack</strong>, (2) The actual <code>Dog</code> object is created on the <strong>Heap</strong>, (3) The Stack variable <code>d</code> holds the <strong>memory address</strong> (reference) pointing to the Heap object. <strong>The variable and the object are in different places.</strong></p>
+  </div>
+
+  <h3>Method Area (Metaspace)</h3>
+  <p>There's a third memory region often glossed over: the <span class="highlight">Method Area</span> (called <strong>Metaspace</strong> in Java 8+). This is where the JVM stores:</p>
+  <ul style="list-style:none;padding-left:16px;">
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ Class structure (bytecode, field names, method signatures)</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ <code>static</code> variables and constants</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ Runtime constant pool</li>
+  </ul>
+  <p>Pre-Java 8, this was called <em>PermGen</em> and had a fixed size — leading to notorious <code>OutOfMemoryError: PermGen space</code> errors. Java 8+ replaced it with Metaspace, which grows dynamically from native memory.</p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 5 ─────────────────────────────────────────────── -->
+<div class="section" id="sec5">
+  <div class="section-label">Section 05</div>
+  <h2>Garbage Collection — The JVM's Janitor</h2>
+
+  <div class="callout layman">
+    <div class="callout-icon">🗑️ Layman's Take</div>
+    <p>Imagine a hotel. Every guest is an object. When a guest checks out and no one else references their room number, the hotel staff (GC) eventually clears out the room and marks it available. You (the programmer) never explicitly clean up — the hotel staff handles it.</p>
+  </div>
+
+  <p>Garbage Collection is the process of automatically reclaiming heap memory occupied by objects that are no longer reachable from any live thread. Java uses <strong>generational GC</strong> based on the observation that <em>most objects die young</em>.</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 740 220" width="740" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="gc-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#3dd68c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="gc-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#f25f5c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Young Gen -->
+      <rect x="10" y="30" width="360" height="150" rx="12" fill="rgba(61,214,140,0.06)" stroke="#3dd68c" stroke-width="1.5"/>
+      <text x="190" y="54" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" fill="#3dd68c" font-weight="700">Young Generation</text>
+      <text x="190" y="70" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">Minor GC runs here frequently &amp; fast</text>
+
+      <!-- Eden -->
+      <rect x="26" y="82" width="160" height="78" rx="8" fill="#1a2a1a" stroke="#3dd68c" stroke-width="1"/>
+      <text x="106" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#3dd68c" font-weight="600">Eden Space</text>
+      <text x="106" y="123" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#8892a4">new objects born here</text>
+      <text x="106" y="140" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">filled → Minor GC fires</text>
+
+      <!-- S0, S1 -->
+      <rect x="196" y="82" width="80" height="78" rx="8" fill="#1a2a1a" stroke="#f5a623" stroke-width="1"/>
+      <text x="236" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#f5a623" font-weight="600">S0</text>
+      <text x="236" y="120" text-anchor="middle" font-family="Sora,sans-serif" font-size="8.5" fill="#8892a4">Survivor</text>
+
+      <rect x="284" y="82" width="80" height="78" rx="8" fill="#1a2a1a" stroke="#f5a623" stroke-width="1"/>
+      <text x="324" y="105" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#f5a623" font-weight="600">S1</text>
+      <text x="324" y="120" text-anchor="middle" font-family="Sora,sans-serif" font-size="8.5" fill="#8892a4">Survivor</text>
+
+      <!-- Old Gen -->
+      <rect x="400" y="30" width="200" height="150" rx="12" fill="rgba(124,106,245,0.06)" stroke="#7c6af5" stroke-width="1.5"/>
+      <text x="500" y="54" text-anchor="middle" font-family="Sora,sans-serif" font-size="12" fill="#7c6af5" font-weight="700">Old Generation</text>
+      <text x="500" y="70" text-anchor="middle" font-family="Sora,sans-serif" font-size="9.5" fill="#8892a4">Major GC — slower, infrequent</text>
+      <text x="500" y="130" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#8892a4">long-lived objects</text>
+      <text x="500" y="148" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">promoted after N GC cycles</text>
+      <text x="500" y="164" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">e.g. caches, app context</text>
+
+      <!-- Metaspace -->
+      <rect x="620" y="30" width="108" height="150" rx="12" fill="rgba(245,166,35,0.06)" stroke="#f5a623" stroke-width="1.5"/>
+      <text x="674" y="70" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="#f5a623" font-weight="600">Metaspace</text>
+      <text x="674" y="90" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">Class</text>
+      <text x="674" y="106" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">metadata</text>
+      <text x="674" y="130" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">static</text>
+      <text x="674" y="146" text-anchor="middle" font-family="Sora,sans-serif" font-size="9" fill="#546e7a">vars</text>
+
+      <!-- Arrows: Eden → S0 → Old -->
+      <line x1="186" y1="120" x2="194" y2="120" stroke="#3dd68c" stroke-width="1.5" marker-end="url(#gc-arr)"/>
+      <line x1="276" y1="120" x2="283" y2="120" stroke="#f5a623" stroke-width="1.5" marker-end="url(#gc-arr)"/>
+      <line x1="365" y1="120" x2="398" y2="120" stroke="#7c6af5" stroke-width="1.5" marker-end="url(#gc-arr)"/>
+      <text x="375" y="113" font-family="Sora,sans-serif" font-size="8.5" fill="#7c6af5">promote</text>
+
+      <!-- Footer labels -->
+      <text x="190" y="205" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#3dd68c">Most objects die here  (95%+)</text>
+      <text x="500" y="205" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#7c6af5">Long survivors promoted</text>
+    </svg>
+    <div class="diagram-caption">Fig 5.1 — Generational heap layout. Most objects die in Eden (Minor GC), survivors get promoted.</div>
+  </div>
+
+  <h3>How GC Decides What to Collect</h3>
+  <p>An object is <span class="highlight">eligible for GC</span> when it is no longer <em>reachable</em> from any live thread through any chain of references. The GC uses <strong>reachability analysis</strong> starting from <em>GC Roots</em>:</p>
+  <ul style="list-style:none;padding-left:16px;">
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ Local variables in active method frames (Stack)</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ Static variables of loaded classes</li>
+    <li style="padding:4px 0;color:#c4c9d8;font-size:14px;">→ Active Java threads</li>
+  </ul>
+  <p>Any object not reachable from a GC root = garbage. The GC marks and sweeps (or compacts) those objects.</p>
+
+  <div class="callout tip">
+    <div class="callout-icon">💡 G1GC — Default in Java 9+</div>
+    <p>The <strong>G1 (Garbage First) GC</strong> is the default since Java 9. It divides the heap into equal-sized regions and prioritizes collecting regions with the most garbage first — giving more predictable pause times. For interview purposes: know that G1GC exists and that ZGC (Java 15+) achieves sub-millisecond pauses for very large heaps.</p>
+  </div>
+
+  <h3>5 Ways to Make an Object Eligible for GC</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java</div>
+    </div>
+    <div class="code-body"><span class="cmt">// 1. Set reference to null</span>
+<span class="cls">Dog</span> d <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>();
+d <span class="op">=</span> <span class="kw">null</span>;           <span class="cmt">// Dog object is now eligible</span>
+
+<span class="cmt">// 2. Reassign reference</span>
+<span class="cls">Dog</span> d1 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>(); <span class="cmt">// Dog A created</span>
+d1 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>();    <span class="cmt">// Dog A now unreachable</span>
+
+<span class="cmt">// 3. Object goes out of scope</span>
+<span class="kw">void</span> <span class="fn">createTemp</span>() {
+    <span class="cls">Dog</span> temp <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>();  <span class="cmt">// temp dies when method returns</span>
+}  <span class="cmt">// temp is now unreachable → eligible</span>
+
+<span class="cmt">// 4. Island of isolation (objects reference each other, but no external ref)</span>
+<span class="cmt">// A → B → A (circular), but nobody outside references A or B → both eligible</span>
+
+<span class="cmt">// 5. Only member reference of parent goes null</span>
+<span class="cls">Owner</span> owner <span class="op">=</span> <span class="kw">new</span> <span class="cls">Owner</span>();
+owner.dog <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>();  <span class="cmt">// Dog referenced via owner.dog</span>
+owner <span class="op">=</span> <span class="kw">null</span>;           <span class="cmt">// Dog also eligible now (no path to reach it)</span></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 6 ─────────────────────────────────────────────── -->
+<div class="section" id="sec6">
+  <div class="section-label">Section 06</div>
+  <h2>Object Creation Lifecycle — Frame by Frame</h2>
+
+  <p>Let's trace exactly what happens when you write <code>Dog d = new Dog("Bruno");</code>:</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><div class="step-content"><strong>Class Loading:</strong> JVM checks if the <code>Dog</code> class is already loaded. If not, the ClassLoader loads it from the <code>.class</code> file into the Method Area.</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-content"><strong>Memory Allocation:</strong> JVM allocates space on the <strong>Heap</strong> for the new <code>Dog</code> object. The size equals the sum of all its instance fields (plus object header ~16 bytes).</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-content"><strong>Default Initialization:</strong> All instance fields get default values — <code>int</code> → 0, <code>boolean</code> → false, <code>String</code> → null, object refs → null.</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-content"><strong>Constructor Execution:</strong> The constructor <code>Dog("Bruno")</code> runs. Parent constructor runs first (implicit <code>super()</code> or explicit), then field initializers, then constructor body.</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-content"><strong>Reference Stored:</strong> The memory address of the new <code>Dog</code> object is stored in the variable <code>d</code> on the <strong>Stack</strong>.</div></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java — Annotated Example</div>
+    </div>
+    <div class="code-body"><span class="kw">public class</span> <span class="cls">Dog</span> {
+    <span class="cmt">// Instance variables → live on HEAP inside each Dog object</span>
+    <span class="typ">String</span> name;
+    <span class="typ">int</span> age;
+
+    <span class="cmt">// Constructor → runs on Heap when object is created</span>
+    <span class="kw">public</span> <span class="fn">Dog</span>(<span class="typ">String</span> name, <span class="typ">int</span> age) {
+        <span class="kw">this</span>.name <span class="op">=</span> name;   <span class="cmt">// "this" refers to the current Heap object</span>
+        <span class="kw">this</span>.age  <span class="op">=</span> age;
+    }
+
+    <span class="kw">public static void</span> <span class="fn">main</span>(<span class="typ">String</span>[] args) {
+
+        <span class="cmt">// Step 1: 'd' reference variable → created on STACK</span>
+        <span class="cmt">// Step 2: new Dog() → actual object created on HEAP at, say, 0x4A3C</span>
+        <span class="cmt">// Step 3: 'd' stores 0x4A3C (the address of the Heap object)</span>
+        <span class="cls">Dog</span> d <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">"Bruno"</span>, <span class="num">3</span>);
+
+        <span class="cmt">// d.name → follow address 0x4A3C → find "Bruno" on Heap</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(d.name);   <span class="cmt">// Bruno</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(d.age);    <span class="cmt">// 3</span>
+
+        <span class="cmt">// Local primitive → lives ENTIRELY on Stack, no Heap involvement</span>
+        <span class="typ">int</span> count <span class="op">=</span> <span class="num">5</span>;                  <span class="cmt">// value 5 is directly on Stack</span>
+
+        <span class="cmt">// When main() ends → Stack frame is popped</span>
+        <span class="cmt">// 'd' variable disappears → Dog object at 0x4A3C has no more references</span>
+        <span class="cmt">// Dog object at 0x4A3C is now GC-eligible</span>
+    }
+}
+</div>
+  </div>
+  <div class="output">Bruno<br/>3</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 7 ─────────────────────────────────────────────── -->
+<div class="section" id="sec7">
+  <div class="section-label">Section 07</div>
+  <h2>Code Examples — All Scenarios</h2>
+
+  <h3>Example 1 — Primitives vs Objects in Memory</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java</div>
+    </div>
+    <div class="code-body"><span class="kw">public class</span> <span class="cls">MemoryDemo</span> {
+    <span class="kw">public static void</span> <span class="fn">main</span>(<span class="typ">String</span>[] args) {
+
+        <span class="cmt">// ── PRIMITIVE ──────────────────────────────────────────────────────</span>
+        <span class="typ">int</span> a <span class="op">=</span> <span class="num">10</span>;  <span class="cmt">// value 10 stored directly on Stack</span>
+        <span class="typ">int</span> b <span class="op">=</span> a;   <span class="cmt">// value 10 COPIED to b. a and b are independent.</span>
+        b <span class="op">=</span> <span class="num">20</span>;      <span class="cmt">// b changes, a stays 10</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(<span class="str">"a = "</span> <span class="op">+</span> a); <span class="cmt">// a = 10</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(<span class="str">"b = "</span> <span class="op">+</span> b); <span class="cmt">// b = 20</span>
+
+        <span class="cmt">// ── OBJECT (REFERENCE) ─────────────────────────────────────────────</span>
+        <span class="typ">int</span>[] arr1 <span class="op">=</span> {<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>}; <span class="cmt">// arr1 on Stack, array object on Heap</span>
+        <span class="typ">int</span>[] arr2 <span class="op">=</span> arr1;       <span class="cmt">// arr2 COPIES the reference (same Heap object!)</span>
+        arr2[<span class="num">0</span>] <span class="op">=</span> <span class="num">99</span>;
+        <span class="cls">System</span>.out.<span class="fn">println</span>(arr1[<span class="num">0</span>]); <span class="cmt">// 99 — same object was modified!</span>
+    }
+}
+</div>
+  </div>
+  <div class="output">a = 10<br/>b = 20<br/>99</div>
+
+  <div class="callout warn">
+    <div class="callout-icon">⚠️ Classic Interview Trap</div>
+    <p>Primitives are <strong>copied by value</strong>. Object references are also copied by value — but the value is an <em>address</em>, so both variables point to the <strong>same object</strong>. Modifying through one affects the other. This is why Java is called "pass-by-value" — but for objects, the <em>value is the reference</em>.</p>
+  </div>
+
+  <h3>Example 2 — Stack Overflow (Infinite Recursion)</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java</div>
+    </div>
+    <div class="code-body"><span class="kw">public class</span> <span class="cls">StackDemo</span> {
+    <span class="kw">public static void</span> <span class="fn">recurse</span>(<span class="typ">int</span> n) {
+        <span class="cmt">// Each call pushes a new frame on the Stack</span>
+        <span class="cmt">// Frames never pop because there is no base case</span>
+        <span class="fn">recurse</span>(n <span class="op">+</span> <span class="num">1</span>);  <span class="cmt">// Stack keeps growing…</span>
+    }
+
+    <span class="kw">public static void</span> <span class="fn">main</span>(<span class="typ">String</span>[] args) {
+        <span class="fn">recurse</span>(<span class="num">0</span>);  <span class="cmt">// → StackOverflowError!</span>
+    }
+}
+</div>
+  </div>
+  <div class="output" style="color:var(--red)">Exception in thread "main" java.lang.StackOverflowError</div>
+
+  <h3>Example 3 — GC Eligibility</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java</div>
+    </div>
+    <div class="code-body"><span class="kw">public class</span> <span class="cls">GCDemo</span> {
+    <span class="kw">public static void</span> <span class="fn">main</span>(<span class="typ">String</span>[] args) {
+
+        <span class="cls">Dog</span> d1 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">"Bruno"</span>);   <span class="cmt">// Heap: DogA</span>
+        <span class="cls">Dog</span> d2 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Dog</span>(<span class="str">"Max"</span>);     <span class="cmt">// Heap: DogB</span>
+
+        d1 <span class="op">=</span> d2;   <span class="cmt">// d1 now points to DogB. DogA has NO references → GC eligible!</span>
+
+        d2 <span class="op">=</span> <span class="kw">null</span>; <span class="cmt">// d2 = null. But d1 still points to DogB → DogB NOT eligible</span>
+
+        <span class="cmt">// At this point: DogA → eligible, DogB → alive (via d1)</span>
+
+        d1 <span class="op">=</span> <span class="kw">null</span>; <span class="cmt">// Now DogB also has no references → DogB GC eligible</span>
+
+        <span class="cmt">// Hint to JVM to run GC (not guaranteed to run immediately)</span>
+        <span class="cls">System</span>.gc();
+    }
+}
+</div>
+  </div>
+
+  <h3>Example 4 — Static vs Instance Memory</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+      <div class="code-lang">Java</div>
+    </div>
+    <div class="code-body"><span class="kw">public class</span> <span class="cls">Counter</span> {
+    <span class="kw">static int</span> total <span class="op">=</span> <span class="num">0</span>;  <span class="cmt">// ← Method Area. ONE copy, shared by all instances</span>
+    <span class="typ">int</span> id;                  <span class="cmt">// ← Heap. Each object gets its OWN copy</span>
+
+    <span class="kw">public</span> <span class="fn">Counter</span>(<span class="typ">int</span> id) {
+        <span class="kw">this</span>.id <span class="op">=</span> id;
+        total<span class="op">++</span>;  <span class="cmt">// increments the shared static</span>
+    }
+
+    <span class="kw">public static void</span> <span class="fn">main</span>(<span class="typ">String</span>[] args) {
+        <span class="cls">Counter</span> c1 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Counter</span>(<span class="num">1</span>);
+        <span class="cls">Counter</span> c2 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Counter</span>(<span class="num">2</span>);
+        <span class="cls">Counter</span> c3 <span class="op">=</span> <span class="kw">new</span> <span class="cls">Counter</span>(<span class="num">3</span>);
+
+        <span class="cls">System</span>.out.<span class="fn">println</span>(<span class="str">"c1.id = "</span>  <span class="op">+</span> c1.id);      <span class="cmt">// 1</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(<span class="str">"c2.id = "</span>  <span class="op">+</span> c2.id);      <span class="cmt">// 2</span>
+        <span class="cls">System</span>.out.<span class="fn">println</span>(<span class="str">"total  = "</span> <span class="op">+</span> <span class="cls">Counter</span>.total); <span class="cmt">// 3 (shared!)</span>
+    }
+}
+</div>
+  </div>
+  <div class="output">c1.id = 1<br/>c2.id = 2<br/>total  = 3</div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 8 ─────────────────────────────────────────────── -->
+<div class="section" id="sec8">
+  <div class="section-label">Section 08</div>
+  <h2>Interview Questions &amp; Model Answers</h2>
+
+  <div class="interview-box">
+    <h4>Top Interview Questions — Day 1 Topics</h4>
+
+    <div class="interview-q">Q1: What is the difference between JDK, JRE, and JVM?</div>
+    <div class="interview-a">
+      <strong>JVM</strong> is the execution engine that runs bytecode — it manages memory and provides runtime features. <strong>JRE = JVM + standard libraries</strong> — needed to run Java programs. <strong>JDK = JRE + developer tools</strong> — needed to write and compile Java. Nested: JVM ⊆ JRE ⊆ JDK. From Java 11+, JDK and JRE are merged, but the conceptual distinction remains important.
+    </div>
+
+    <div class="interview-q">Q2: Where are objects stored in Java? Where are local variables?</div>
+    <div class="interview-a">
+      Objects are stored on the <strong>Heap</strong>. Local variables and method call frames are stored on the <strong>Stack</strong>. When you write <code>Dog d = new Dog()</code>, the <em>variable d</em> (which holds the reference/address) is on the Stack, and the <em>actual Dog object</em> is on the Heap. Static variables go in the Method Area (Metaspace).
+    </div>
+
+    <div class="interview-q">Q3: What triggers Garbage Collection? Can you force it?</div>
+    <div class="interview-a">
+      GC runs automatically when the <strong>Eden space fills up</strong> (Minor GC) or when the JVM needs memory. You can <em>hint</em> to the JVM with <code>System.gc()</code>, but it's <strong>not guaranteed</strong> to run immediately — the JVM can ignore it. Never rely on explicit GC calls in production code. Objects become eligible when no live thread can reach them.
+    </div>
+
+    <div class="interview-q">Q4: What is StackOverflowError vs OutOfMemoryError?</div>
+    <div class="interview-a">
+      <strong>StackOverflowError</strong>: the call Stack is exhausted — typically caused by infinite recursion (a method calling itself with no base case). <strong>OutOfMemoryError</strong>: the Heap is full — too many live objects, or a memory leak (objects accumulating without being freed). Note: both are <em>Errors</em>, not Exceptions — they indicate JVM-level failures.
+    </div>
+
+    <div class="interview-q">Q5: What is the String Pool? Why is it in the Heap?</div>
+    <div class="interview-a">
+      The <strong>String Pool</strong> is a special cache inside the Heap (Metaspace before Java 8, Heap after) that stores string literals. When you write <code>"Hello"</code>, the JVM first checks if "Hello" already exists in the pool — if yes, it reuses it rather than creating a new object. This saves memory since Strings are immutable and widely used. <code>new String("Hello")</code> bypasses the pool and creates a fresh Heap object.
+    </div>
+
+    <div class="interview-q">Q6: Is Java pass-by-value or pass-by-reference?</div>
+    <div class="interview-a">
+      Java is <strong>always pass-by-value</strong>. For primitives, the value itself is copied. For objects, the <em>reference (address) is copied</em> — so the method receives a copy of the pointer, not the object. If you reassign the reference inside the method, the caller's reference is unaffected. If you modify the object's fields through the reference, the caller sees the changes.
+    </div>
+
+    <div class="interview-q">Q7: What is JIT compilation? How does it help?</div>
+    <div class="interview-a">
+      JIT (Just-In-Time) compilation is the JVM's optimization mechanism. Initially, bytecode is interpreted line by line. The JVM identifies <em>hot methods</em> (called frequently) and compiles them to native machine code. After compilation, those methods run at near-native speed. This is why Java warm-up time matters in benchmarks — cold start = interpreter, warm = compiled native code.
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── SECTION 9 ─────────────────────────────────────────────── -->
+<div class="section" id="sec9">
+  <div class="section-label">Section 09</div>
+  <h2>Quick Recap — Memory Anchors</h2>
+
+  <p>Use these as mental anchors — one sentence per concept, sharp enough to fire instantly in an interview:</p>
+
+  <div class="memory-grid">
+    <div class="memory-card">
+      <div class="mc-label">JVM</div>
+      <div class="mc-val">Runs bytecode on any OS</div>
+      <div class="mc-sub">The engine. Manages memory. Provides GC + JIT.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">JRE</div>
+      <div class="mc-val">JVM + standard libraries</div>
+      <div class="mc-sub">Install this to RUN. No compiler included.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">JDK</div>
+      <div class="mc-val">JRE + dev tools</div>
+      <div class="mc-sub">Install this to DEVELOP. Has javac.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">Stack</div>
+      <div class="mc-val">Method frames + local vars</div>
+      <div class="mc-sub">LIFO. Thread-private. Auto-freed. Fast.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">Heap</div>
+      <div class="mc-val">All objects (new keyword)</div>
+      <div class="mc-sub">Shared. GC-managed. Large. Slower.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">Metaspace</div>
+      <div class="mc-val">Class metadata + statics</div>
+      <div class="mc-sub">Was PermGen. Now grows dynamically.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">GC</div>
+      <div class="mc-val">Reclaims unreachable objects</div>
+      <div class="mc-sub">G1GC default. Minor GC (Eden) = fast.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">JIT</div>
+      <div class="mc-val">Hot code → native speed</div>
+      <div class="mc-sub">Starts slow (interpreter), warms up fast.</div>
+    </div>
+    <div class="memory-card">
+      <div class="mc-label">WORA</div>
+      <div class="mc-val">Write Once, Run Anywhere</div>
+      <div class="mc-sub">Bytecode is platform-neutral. JVM adapts.</div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">✅ Day 1 Checklist</div>
+    <p>
+      <strong>Can you explain</strong> JDK/JRE/JVM difference in one sentence each?<br/>
+      <strong>Can you draw</strong> heap vs stack with an object example?<br/>
+      <strong>Can you say</strong> what GC eligibility means + 3 ways to make an object eligible?<br/>
+      <strong>Can you explain</strong> why Java is pass-by-value even for objects?<br/>
+      If yes to all 4 → Day 1 ✔️
+    </p>
+  </div>
+</div>
+
+<!-- ─── BOTTOM NAV ─────────────────────────────────────────────── -->
+<div class="bottom-nav">
+  <div>
+    <div class="nav-label">Previous</div>
+    <span style="color:var(--muted);font-size:14px;">— (Day 1 is the start)</span>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Java Interview Roadmap</div>
+    <div style="font-size:12px;color:var(--accent);font-weight:600;margin-top:2px;">Shreyas Gangadhar · UT Dallas MS-ITM</div>
+  </div>
+  <div style="text-align:right;">
+    <div class="nav-label">Next</div>
+    <a class="nav-link" href="#">Day 2 → Classes, Objects &amp; Static →</a>
+  </div>
+</div>
+
+</div><!-- end wrapper -->
+</body>
+</html>
