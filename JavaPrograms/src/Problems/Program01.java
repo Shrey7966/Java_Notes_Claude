@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class Program01 {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws InstantiationException, IllegalAccessException {
 		
 		String str = "I am Learning learning java java progarmming";
 		
@@ -22,6 +22,7 @@ public class Program01 {
 		}
 		
 	
+		Program01 p1= Program01.class.newInstance();
 		
 	}
 
